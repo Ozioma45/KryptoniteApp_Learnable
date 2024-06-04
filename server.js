@@ -1,14 +1,17 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
-const redis = require("redis");
+const { createClient } = require("redis");
 const authRoutes = require("./routes/authRoute");
-
 dotenv.config();
 
 const app = express();
+
+// Middleware
+app.use(bodyParser.json());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public"))); // Serve static files
+app.use(cors());
 
 // MongoDB connection
 const connectDb = async () => {
@@ -23,14 +26,21 @@ const connectDb = async () => {
 connectDb();
 
 // Redis client
-const redisClient = redis.createClient({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
+const redisClient = createClient({
+  url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+  socket: {
+    reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+  },
 });
 
 redisClient.on("error", (err) => {
-  console.log("Redis error: ", err);
+  console.error("Redis error: ", err);
 });
+
+redisClient
+  .connect()
+  .then(() => console.log("Redis connected"))
+  .catch((err) => console.log("Could not connect to Redis:", err));
 
 app.locals.redisClient = redisClient;
 

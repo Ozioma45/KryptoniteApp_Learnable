@@ -10,9 +10,6 @@ exports.register = async (req, res) => {
   const user = new User({ email, password: hashedPassword, isVerified: false });
   await user.save();
 
-  const otp = generateOTP();
-  req.app.locals.redisClient.setex(email, 300, otp);
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -36,7 +33,7 @@ exports.login = async (req, res) => {
   }
 
   const otp = generateOTP();
-  req.app.locals.redisClient.setex(email, 300, otp);
+  await req.app.locals.redisClient.set(email, otp, "EX", 300);
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
